@@ -10,6 +10,8 @@ import { configValidationSchema } from '@/config/config.validation';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { AppConfigService } from './config/app-config.service';
 import { HealthModule } from './health/health.module';
+import { HotelsModule } from './hotels/hotels.module';
+import { PrismaService } from './prisma/prisma.service';
 
 @Module({
   imports: [
@@ -21,9 +23,10 @@ import { HealthModule } from './health/health.module';
     LoggerModule,
     PrismaModule,
     HealthModule,
+    HotelsModule,
   ],
   controllers: [],
-  providers: [AppConfigService],
+  providers: [AppConfigService, PrismaService],
   exports: [AppConfigService], // so you can inject it anywhere
 })
 export class AppModule implements NestModule {

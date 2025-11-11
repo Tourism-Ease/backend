@@ -4,6 +4,7 @@ export interface QueryParams {
   fields?: string;
   page?: string | number;
   limit?: string | number;
+  keyword?: string;
 }
 
 export interface PaginationResult {
@@ -43,10 +44,12 @@ export class ApiFeatures {
 
   limitFields(): this {
     if (this.query?.fields) {
-      this.select = this.query.fields.split(',').reduce<Record<string, boolean>>((acc, field) => {
-        acc[field] = true;
-        return acc;
-      }, {});
+      this.select = this.query.fields
+        .split(',')
+        .reduce<Record<string, boolean>>((acc, field) => {
+          acc[field] = true;
+          return acc;
+        }, {});
     }
     return this;
   }
@@ -56,6 +59,15 @@ export class ApiFeatures {
     const limit = Number(this.query?.limit) || 20;
     this.skip = (page - 1) * limit;
     this.take = limit;
+    return this;
+  }
+  search(fields: string[]): this {
+    if (this.query?.keyword) {
+      const keyword = this.query.keyword.trim();
+      this.filters.OR = fields.map((field) => ({
+        [field]: { contains: keyword, mode: 'insensitive' },
+      }));
+    }
     return this;
   }
 

@@ -24,7 +24,12 @@ export abstract class BaseFactory<T> {
 
   //  Get All
   async findAll(query?: any): Promise<{ data: T[]; pagination: any }> {
-    const api = new ApiFeatures(query).filter().sort().limitFields().paginate();
+    const api = new ApiFeatures(query)
+      .filter()
+      .search(['name', 'city'])
+      .sort()
+      .limitFields()
+      .paginate();
 
     const total = await this.model.count({ where: api.filters });
     const data = await this.model.findMany({
