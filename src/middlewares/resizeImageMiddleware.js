@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: '../config.env' });
+
 import asyncHandler from 'express-async-handler';
 import { v4 as uuid } from 'uuid';
 import sharp from 'sharp';

@@ -56,16 +56,80 @@ export const allowedTo = (...roles) =>
 // -----------------------------
 // Auth Controllers
 // -----------------------------
-export const signup = asyncHandler(async (req, res) => {
+export const signup = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, email, password } = req.body;
+
   const user = await UserModel.create({ firstName, lastName, email, password });
-  sendToken(user, 201, res);
+
+  // Generate verification code (reuse your resetCode util)
+  const verifyCode = generateResetCode();
+  user.verifyEmailCode = hashResetCode(verifyCode, user.id);
+  user.verifyEmailCodeExpiredAt = Date.now() + 15 * 60 * 1000; // 15 min
+  await user.save();
+
+  // Send email
+  const htmlMessage = `
+    <div style="font-family:Arial, sans-serif; padding:20px; background:#f8f9fa;">
+      <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:8px; border:1px solid #ddd;">
+        <h2>Email Verification</h2>
+        <p>Hi <strong>${user.firstName}</strong>,</p>
+        <p>Use the code below to verify your account:</p>
+        <div style="text-align:center; margin:25px 0;">
+          <span style="font-size:28px; letter-spacing:6px; font-weight:bold; color:#28a745; padding:10px 20px; border:1px dashed #28a745; border-radius:6px;">
+            ${verifyCode}
+          </span>
+        </div>
+        <p>This code expires in 15 minutes.</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: 'Verify your account',
+      html: htmlMessage,
+    });
+  } catch (err) {
+    user.verifyEmailCode = undefined;
+    user.verifyEmailCodeExpiredAt = undefined;
+    await user.save();
+    return next(new APIError('Error sending verification email', 500));
+  }
+
+  res.status(201).json({
+    status: 'success',
+    message: 'User created. Verification code sent to email.',
+  });
+});
+
+export const verifyEmail = asyncHandler(async (req, res, next) => {
+  const { email, verifyCode } = req.body;
+  const user = await UserModel.findOne({ email });
+
+  if (!user) return next(new APIError('No user found for this email', 404));
+
+  const expired = Date.now() > new Date(user.verifyEmailCodeExpiredAt).getTime();
+  const isValid = !expired && hashAndVerifyResetCode(verifyCode, user.id, user.verifyEmailCode);
+
+  if (!isValid) return next(new APIError('Invalid or expired verification code', 400));
+
+  user.isEmailVerified = true;
+  user.verifyEmailCode = undefined;
+  user.verifyEmailCodeExpiredAt = undefined;
+  await user.save();
+
+  sendToken(user, 200, res);
 });
 
 export const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
+
   const user = await UserModel.findOne({ email });
   if (!user) return next(new APIError('Invalid email or password', 401));
+
+  if (!user.isEmailVerified)
+    return next(new APIError('Please verify your email before logging in', 401));
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) return next(new APIError('Invalid email or password', 401));
@@ -74,8 +138,18 @@ export const login = asyncHandler(async (req, res, next) => {
 });
 
 export const logout = asyncHandler(async (req, res) => {
-  res.clearCookie('token');
-  res.status(200).json({ message: 'Logged out successfully' });
+  const isProd = process.env.NODE_ENV === 'production';
+
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'None' : 'Lax',
+  });
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Logged out successfully',
+  });
 });
 
 // -----------------------------

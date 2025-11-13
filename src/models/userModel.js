@@ -38,6 +38,14 @@ const userSchema = new mongoose.Schema(
     passwordResetCode: String,
     passwordResetCodeExpiredAt: Date,
     passwordResetVerified: Boolean,
+
+    verifyEmailCode: String,
+    verifyEmailCodeExpiredAt: Date,
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+
     role: {
       type: String,
       enum: ['user', 'admin', 'employee'],
@@ -82,7 +90,7 @@ userSchema.virtual('fullName').get(function () {
 });
 
 userSchema.virtual('avatarUrl').get(function () {
-  if (this.profileImage) return getImageUrl(this.profileImage, 'users');
+  if (this.avatar) return getImageUrl(this.avatar);
   return null;
 });
 
