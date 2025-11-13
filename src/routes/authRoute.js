@@ -3,6 +3,7 @@ import passport from 'passport';
 import { signupValidator, loginValidator } from '../validators/authValidator.js';
 import {
   signup,
+  verifyEmail,
   login,
   logout,
   forgotPassword,
@@ -15,6 +16,8 @@ const router = express.Router();
 
 // Normal Auth
 router.post('/signup', signupValidator, signup);
+router.post('/verify-email', verifyEmail);
+
 router.post('/login', loginValidator, login);
 router.post('/logout', logout);
 
@@ -35,13 +38,13 @@ router.get(
   }),
   async (req, res) => {
     // req.user is set by passport
-    if (!req.user) return res.redirect(`${process.env.FRONTEND_URL}/auth/error`);
+    if (!req.user) return res.redirect(`${process.env.FRONTEND_URL}/`);
 
     // Send token in HTTP-only cookie
     sendToken(req.user, 200, res);
 
     // Redirect to React app
-    res.redirect(`${process.env.FRONTEND_URL}/home`);
+    res.redirect(`${process.env.FRONTEND_URL}/`);
   }
 );
 

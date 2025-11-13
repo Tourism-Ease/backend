@@ -20,7 +20,7 @@ const app = express();
 //  MIDDLEWARE CONFIGURATION
 // ===============================
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.DOMAIN_URL || 'http://localhost:5173',
   credentials: true,
 };
 

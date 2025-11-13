@@ -25,7 +25,6 @@ export const sendToken = (user, statusCode, res) => {
   // Send response
   res.status(statusCode).json({
     status: 'success',
-    token,
     data: sanitizeUser(user),
   });
 };

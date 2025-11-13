@@ -9,6 +9,7 @@ import { createToken } from '../utils/auth.js';
 import { uploadSingleImage } from '../middlewares/uploadImageMiddleware.js';
 import { resizeImage } from '../middlewares/resizeImageMiddleware.js';
 import { deleteCloudinaryImages } from '../middlewares/deleteImageMiddleware.js';
+import { sendToken } from '../utils/sendToken.js';
 
 // Middlewares
 export const uploadUserImage = uploadSingleImage('avatar');
@@ -81,7 +82,7 @@ export const changeUserPassword = asyncHandler(async (req, res, next) => {
 
   const hashedPassword = await bcrypt.hash(password, 12);
 
-  const document = await UserModel.findByIdAndUpdate(
+  const user = await UserModel.findByIdAndUpdate(
     id,
     {
       password: hashedPassword,
@@ -93,11 +94,11 @@ export const changeUserPassword = asyncHandler(async (req, res, next) => {
     }
   );
 
-  if (!document) {
+  if (!user) {
     return next(new APIError(`No User for this Id ${id}`, 404));
   }
 
-  res.status(200).json({ data: document });
+  sendToken(user, 200, res);
 });
 
 // @ desc   Delete specific user
