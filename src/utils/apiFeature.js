@@ -21,10 +21,24 @@ class APIFeature {
     const excludedFields = ['page', 'limit', 'sort', 'fields', 'keyword'];
     excludedFields.forEach((field) => delete queryStringObj[field]);
 
-    // Support MongoDB operators: gte, gt, lte, lt
-    let queryStr = JSON.stringify(queryStringObj);
+    // If using `filter[city]` style
+    let filterQuery = {};
+
+    if (queryStringObj.filter) {
+      for (const key in queryStringObj.filter) {
+        // If the key is meant for nested 'address', prefix it
+        if (['city', 'country', 'street'].includes(key)) {
+          filterQuery[`address.${key}`] = queryStringObj.filter[key];
+        } else {
+          filterQuery[key] = queryStringObj.filter[key]; // top-level fields
+        }
+      }
+    }
+
+    // Support MongoDB operators (gte, lte, etc.)
+    let queryStr = JSON.stringify(filterQuery);
     queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
-    const filterQuery = JSON.parse(queryStr);
+    filterQuery = JSON.parse(queryStr);
 
     this.mongooseQuery = this.mongooseQuery.find(filterQuery);
     this._filter = filterQuery;
@@ -62,14 +76,26 @@ class APIFeature {
       let searchQuery = {};
 
       switch (modelName) {
-        case 'Product':
+        case 'Hotel':
           searchQuery = {
             $or: [
-              { title: { $regex: this.queryString.keyword, $options: 'i' } },
-              { description: { $regex: this.queryString.keyword, $options: 'i' } },
+              { name: { $regex: this.queryString.keyword, $options: 'i' } },
+              { 'address.city': { $regex: this.queryString.keyword, $options: 'i' } },
+              { 'address.country': { $regex: this.queryString.keyword, $options: 'i' } },
+              { propertyHighlights: { $regex: this.queryString.keyword, $options: 'i' } },
             ],
           };
           break;
+
+        case 'RoomType':
+          searchQuery = {
+            $or: [
+              { name: { $regex: this.queryString.keyword, $options: 'i' } },
+              { amenities: { $regex: this.queryString.keyword, $options: 'i' } },
+            ],
+          };
+          break;
+
         case 'User':
           searchQuery = {
             $or: [
