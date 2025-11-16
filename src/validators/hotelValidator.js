@@ -1,6 +1,4 @@
 import { check } from 'express-validator';
-import HotelModel from '../models/hotelModel.js';
-import APIError from '../utils/apiError.js';
 import { validatorMiddleware } from '../middlewares/validatorMiddleware.js';
 
 // Create hotel validator
