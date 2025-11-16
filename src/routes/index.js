@@ -3,6 +3,7 @@ import authRoute from './authRoute.js';
 import hotelRoute from './hotelRoute.js';
 import roomTypeRoute from './roomTypeRoute.js';
 import transportationRoute from './transportationRoute.js';
+import tripRoute from './tripRoute.js';
 
 // Mount Routes
 const mountRoutes = (app) => {
@@ -24,6 +25,7 @@ const mountRoutes = (app) => {
   app.use('/api/v1/hotels', hotelRoute);
   app.use('/api/v1/room-types', roomTypeRoute);
   app.use('/api/v1/transportations', transportationRoute);
+  app.use('/api/v1/trips', tripRoute);
 };
 
 export default mountRoutes;
