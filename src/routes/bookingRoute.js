@@ -15,8 +15,7 @@ import { protect, allowedTo } from '../services/authService.js';
 
 const router = express.Router();
 
-// Stripe Webhook (raw body)
-router.post('/webhook-checkout', express.raw({ type: 'application/json' }), webhookCheckout);
+
 
 // All routes below require login
 router.use(protect);
