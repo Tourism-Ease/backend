@@ -76,37 +76,39 @@ export const resizeImage = (folderName, entityName, imageField) =>
 export const resizeMixOfImages = (folderName, entityName, singleImageField, multipleImagesField) =>
   asyncHandler(async (req, res, next) => {
     if (!req.files) return next();
+    try {
+      // Single cover image
+      if (req.files[singleImageField]) {
+        const image = req.files[singleImageField][0];
+        const filename = `${entityName}-${uuid()}-${Date.now()}-cover`;
 
-    // Single cover image
-    if (req.files[singleImageField]) {
-      const image = req.files[singleImageField][0];
-      const filename = `${entityName}-${uuid()}-${Date.now()}-cover`;
+        const buffer = await processImage(image.buffer, 2000, 1333, 80);
+        const result = await uploadToCloudinary(buffer, folderName, filename);
 
-      const buffer = await processImage(image.buffer, 2000, 1333, 80);
-      const result = await uploadToCloudinary(buffer, folderName, filename);
+        req.body[singleImageField] = result.public_id;
+        req.body.imageUrl = result.secure_url;
+      }
 
-      req.body[singleImageField] = result.public_id;
-      req.body.imageUrl = result.secure_url;
+      // Multiple images
+      if (req.files[multipleImagesField]) {
+        const images = req.files[multipleImagesField];
+        const results = await Promise.all(
+          images.map(async (image, index) => {
+            const filename = `${entityName}-${uuid()}-${Date.now()}-${index + 1}`;
+            const buffer = await processImage(image.buffer, 900, 900, 75);
+            const uploadResult = await uploadToCloudinary(buffer, folderName, filename);
+            return {
+              image: uploadResult.public_id,
+              imageUrl: uploadResult.secure_url,
+            };
+          })
+        );
+
+        req.body.images = results.map((r) => r.image);
+        req.body.imagesUrls = results.map((r) => r.imageUrl);
+      }
+      next();
+    } catch (error) {
+      next(new APIError(err.message || 'Image upload failed', 500));
     }
-
-    // Multiple images
-    if (req.files[multipleImagesField]) {
-      const images = req.files[multipleImagesField];
-      const results = await Promise.all(
-        images.map(async (image, index) => {
-          const filename = `${entityName}-${uuid()}-${Date.now()}-${index + 1}`;
-          const buffer = await processImage(image.buffer, 900, 900, 75);
-          const uploadResult = await uploadToCloudinary(buffer, folderName, filename);
-          return {
-            image: uploadResult.public_id,
-            imageUrl: uploadResult.secure_url,
-          };
-        })
-      );
-
-      req.body.images = results.map((r) => r.image);
-      req.body.imagesUrls = results.map((r) => r.imageUrl);
-    }
-
-    next();
   });
