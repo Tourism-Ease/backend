@@ -5,6 +5,7 @@ import roomTypeRoute from './roomTypeRoute.js';
 import transportationRoute from './transportationRoute.js';
 import packageRoute from './packageRoute.js';
 import destinationRoute from './destinationRoute.js';
+import tripRoute from './tripRoute.js';
 
 // Mount Routes
 const mountRoutes = (app) => {
@@ -28,6 +29,7 @@ const mountRoutes = (app) => {
   app.use('/api/v1/transportations', transportationRoute);
   app.use('/api/v1/destination', destinationRoute);
   app.use('/api/v1/packages', packageRoute);
+  app.use('/api/v1/trips', tripRoute);
 };
 
 export default mountRoutes;
