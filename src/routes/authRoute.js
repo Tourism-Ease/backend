@@ -10,7 +10,7 @@ import {
   verifyResetCode,
   resetPassword,
 } from '../services/authService.js';
-import { sendToken } from '../utils/sendToken.js';
+import { createToken } from '../utils/auth.js';
 
 const router = express.Router();
 
@@ -30,6 +30,7 @@ router.get(
   })
 );
 
+// Google callback
 router.get(
   '/google/callback',
   passport.authenticate('google', {
@@ -37,19 +38,25 @@ router.get(
     failureRedirect: '/api/v1/auth/google/failure',
   }),
   async (req, res) => {
-    // req.user is set by passport
-    if (!req.user) return res.redirect(`${process.env.FRONTEND_URL}/`);
+    const isProd = process.env.NODE_ENV === 'production';
 
-    // Send token in HTTP-only cookie
-    sendToken(req.user, 200, res);
+    // Set cookie manually (DO NOT send JSON!)
+    const token = createToken(req.user._id);
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'None' : 'Lax',
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
-    // Redirect to React app
-    res.redirect(`${process.env.FRONTEND_URL}/`);
+    // Redirect to React route that fetches user
+    return res.redirect(`${process.env.FRONTEND_URL}/auth/success`);
   }
 );
 
+// Failure route
 router.get('/google/failure', (req, res) => {
-  res.redirect(`${process.env.FRONTEND_URL}/auth/error`);
+  return res.redirect(`${process.env.FRONTEND_URL}/auth/error`);
 });
 
 // Forgot password

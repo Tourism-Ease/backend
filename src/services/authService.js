@@ -157,10 +157,24 @@ export const logout = asyncHandler(async (req, res) => {
 // -----------------------------
 export const googleAuth = asyncHandler(async (req, res, next) => {
   if (!req.user) return next(new APIError('Google authentication failed', 400));
-  if (process.env.FRONTEND_URL) {
-    sendToken(req.user, 200, res);
-    return res.redirect(`${process.env.FRONTEND_URL}/home`);
-  }
+
+  const user = req.user;
+
+  // Set cookie using same logic as normal login
+  const isProd = process.env.NODE_ENV === 'production';
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'None' : 'Lax',
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  };
+
+  const token = createToken(user._id);
+  res.cookie('token', token, cookieOptions);
+
+  // Redirect to frontend just like OAuth normally does
+  return res.redirect(`${process.env.FRONTEND_URL}/auth/success`);
 });
 
 export const googleFailure = (req, res) => {
