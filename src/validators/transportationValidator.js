@@ -24,8 +24,8 @@ export const createTransportationValidator = [
   check('type')
     .notEmpty()
     .withMessage('Transportation type is required')
-    .isIn(['bus', 'hiAce', 'plane'])
-    .withMessage('Transportation type must be one of: bus, hiAce, plane'),
+    .isIn(['bus', 'hiAce'])
+    .withMessage('Transportation type must be one of: bus, hiAce'),
 
   check('class')
     .optional()

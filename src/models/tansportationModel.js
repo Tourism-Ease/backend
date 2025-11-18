@@ -10,7 +10,7 @@ const transportationSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ['bus', 'hiAce', 'plane'],
+      enum: ['bus', 'hiAce',],
       required: true,
     },
 

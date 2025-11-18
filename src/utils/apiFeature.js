@@ -76,6 +76,24 @@ class APIFeature {
       let searchQuery = {};
 
       switch (modelName) {
+        case 'Destination':
+          searchQuery = {
+            $or: [
+              { name: { $regex: this.queryString.keyword, $options: 'i' } },
+              { country: { $regex: this.queryString.keyword, $options: 'i' } },
+              { city: { $regex: this.queryString.keyword, $options: 'i' } },
+            ],
+          };
+          break;
+        case 'Transportation':
+          searchQuery = {
+            $or: [
+              { companyName: { $regex: this.queryString.keyword, $options: 'i' } },
+              { type: { $regex: this.queryString.keyword, $options: 'i' } },
+              { class: { $regex: this.queryString.keyword, $options: 'i' } },
+            ],
+          };
+          break;
         case 'Hotel':
           searchQuery = {
             $or: [
