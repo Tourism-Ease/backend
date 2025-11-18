@@ -1,3 +1,5 @@
+import APIError from '../../utils/apiError.js';
+
 export const parseJsonFields = (req, res, next) => {
   try {
     for (const key in req.body) {
