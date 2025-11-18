@@ -8,6 +8,8 @@ import packageRoute from './packageRoute.js';
 import destinationRoute from './destinationRoute.js';
 import bookingRoute from './bookingRoute.js';
 import { webhookCheckout } from '../services/bookingService.js';
+import faqRoute from './faq.route.js';
+
 import express from 'express';
 
 // Mount Routes
@@ -37,6 +39,7 @@ const mountRoutes = (app) => {
   app.use('/api/v1/packages', packageRoute);
   app.use('/api/v1/trips', tripRoute);
   app.use('/api/v1/bookings', bookingRoute);
+  app.use('/api/v1/faq', faqRoute);
 };
 
 export default mountRoutes;
