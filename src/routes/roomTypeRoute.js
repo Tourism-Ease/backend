@@ -11,6 +11,7 @@ import {
   createRoomTypeValidator,
   updateRoomTypeValidator,
 } from '../validators/roomTypesValidator.js';
+
 const router = express.Router({ mergeParams: true });
 
 // ==================== GET Routes ====================

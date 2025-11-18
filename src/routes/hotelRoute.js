@@ -16,6 +16,7 @@ import { sendDeleteResponse } from '../middlewares/deleteResponse.js';
 import { sendUpdatedDocResponse } from '../middlewares/updateResponse.js';
 import { validateAddress } from '../middlewares/hotel/validateAddress.js';
 import { createHotelValidator, updateHotelValidator } from '../validators/hotelValidator.js';
+
 const router = express.Router();
 
 // GET

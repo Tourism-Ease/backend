@@ -3,9 +3,12 @@ import authRoute from './authRoute.js';
 import hotelRoute from './hotelRoute.js';
 import roomTypeRoute from './roomTypeRoute.js';
 import transportationRoute from './transportationRoute.js';
+import tripRoute from './tripRoute.js';
 import packageRoute from './packageRoute.js';
 import destinationRoute from './destinationRoute.js';
-import tripRoute from './tripRoute.js';
+import bookingRoute from './bookingRoute.js';
+import { webhookCheckout } from '../services/bookingService.js';
+import express from 'express';
 
 // Mount Routes
 const mountRoutes = (app) => {
@@ -22,14 +25,18 @@ const mountRoutes = (app) => {
     });
   });
 
+  // Stripe Webhook (raw body)
+  app.post('/webhook-checkout', express.raw({ type: 'application/json' }), webhookCheckout);
+
   app.use('/api/v1/users', userRoute);
   app.use('/api/v1/auth', authRoute);
   app.use('/api/v1/hotels', hotelRoute);
   app.use('/api/v1/room-types', roomTypeRoute);
   app.use('/api/v1/transportations', transportationRoute);
-  app.use('/api/v1/destination', destinationRoute);
+  app.use('/api/v1/destinations', destinationRoute);
   app.use('/api/v1/packages', packageRoute);
   app.use('/api/v1/trips', tripRoute);
+  app.use('/api/v1/bookings', bookingRoute);
 };
 
 export default mountRoutes;

@@ -1,4 +1,6 @@
 import { check } from 'express-validator';
+import HotelModel from '../models/hotelModel.js';
+import APIError from '../utils/apiError.js';
 import { validatorMiddleware } from '../middlewares/validatorMiddleware.js';
 
 // Create hotel validator
@@ -13,7 +15,7 @@ export const createHotelValidator = [
         try {
           JSON.parse(value);
         } catch (err) {
-          throw new Error('address must be a JSON object');
+          throw new APIError('address must be a JSON object', 400);
         }
       }
       return true;
@@ -27,10 +29,10 @@ export const createHotelValidator = [
         try {
           const parsed = JSON.parse(value);
           if (!parsed.coordinates || !Array.isArray(parsed.coordinates)) {
-            throw new Error('location must have coordinates array [lng, lat]');
+            throw new APIError('location must have coordinates array [lng, lat]', 400);
           }
         } catch (err) {
-          throw new Error('location must be a valid JSON with coordinates');
+          throw new APIError('location must be a valid JSON with coordinates', 400);
         }
       }
       return true;
