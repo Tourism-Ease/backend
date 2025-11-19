@@ -41,7 +41,7 @@ router.get('/:id', getTransportationValidator, getTransportationById);
 
 router.post('/', createTransportationValidator, createTransportation);
 
-router.put('/:id', updateTransportationValidator, updateTransportationById);
+router.patch('/:id', updateTransportationValidator, updateTransportationById);
 
 router.delete('/:id', deleteTransportationValidator, deleteTransportationById, sendDeleteResponse);
 

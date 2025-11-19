@@ -7,6 +7,7 @@ import APIFeature from '../utils/apiFeature.js';
  */
 export const createOne = (Model) =>
   asyncHandler(async (req, res) => {
+    console.log(req.body);
     const document = await Model.create(req.body);
     await document.save();
     res.status(201).json({ data: document });
