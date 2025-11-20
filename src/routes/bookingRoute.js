@@ -1,8 +1,7 @@
 import express from 'express';
-
 import {
   createBooking,
-  webhookCheckout,
+  // webhookCheckout,
   getBookings,
   getBookingById,
   filterBookingsForLoggedUsers,
@@ -15,9 +14,9 @@ import { protect, allowedTo } from '../services/authService.js';
 
 const router = express.Router();
 
-
-
-// All routes below require login
+// ----------------------------
+// PROTECTED ROUTES
+// ----------------------------
 router.use(protect);
 
 // ----------------------------
@@ -31,7 +30,7 @@ router.post('/', allowedTo('user'), createBooking);
 router.get('/', allowedTo('user', 'admin'), filterBookingsForLoggedUsers, getBookings);
 
 // Get single booking
-router.get('/:id', getBookingById);
+router.get('/:id', allowedTo('user', 'admin'), getBookingById);
 
 // Cancel booking (user can cancel if allowed)
 router.patch('/:id/cancel', allowedTo('user', 'admin'), cancelBooking);
@@ -45,5 +44,8 @@ router.get('/:id/pay-remaining', allowedTo('user'), payRemainingAmount);
 
 // Confirm booking (admin)
 router.put('/:id/confirm', allowedTo('admin'), confirmBooking);
+
+// Stripe webhook (no auth, called by Stripe)
+// router.post('/webhook-checkout', express.raw({ type: 'application/json' }), webhookCheckout);
 
 export default router;

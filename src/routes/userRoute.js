@@ -38,7 +38,7 @@ const router = express.Router();
 
 router.post('/activateAccount', loginValidator, reactivateUserAccount);
 
-router.use(protect);
+// router.use(protect);
 
 // USER
 router.get('/profile', protect, getLoggedUserData, getUserById);

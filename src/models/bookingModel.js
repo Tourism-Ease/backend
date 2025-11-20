@@ -1,98 +1,136 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+      ref: "User",
+      required: [true, "User is required"],
+      index: true,
     },
 
-    // Booking can be for Trip or Package
     bookingType: {
       type: String,
-      enum: ['Trip', 'Package'],
-      required: true,
+      enum: ["Trip", "Package"],
+      required: [true, "Booking type is required"],
     },
 
-    // Dynamic reference to Trip or Package
     item: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      refPath: 'bookingType',
+      refPath: "bookingType",
+      required: [true, "Item reference is required"],
+      index: true,
     },
 
-    quantity: {
-      type: Number,
-      default: 1,
-      min: 1,
+    people: {
+      adults: {
+        type: Number,
+        required: true,
+        min: [1, "At least one adult is required"],
+      },
+      children: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      foreigners: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
     },
 
-    // Total full price for booking
     totalPrice: {
       type: Number,
-      required: true,
-      min: 0,
+      required: [true, "Total price is required"],
+      min: [0, "Total price cannot be negative"],
     },
 
-    // full = pay 100%
-    // deposit = pay 50%
     paymentType: {
       type: String,
-      enum: ['full', 'deposit'],
-      required: true,
+      enum: ["full", "deposit"],
+      required: [true, "Payment type is required"],
     },
 
-    // Paid online or cash (calculated automatically)
     paidAmount: {
       type: Number,
       default: 0,
-      min: 0,
+      min: [0, "Paid amount cannot be negative"],
     },
 
     remainingAmount: {
       type: Number,
       default: 0,
-      min: 0,
+      min: [0, "Remaining amount cannot be negative"],
     },
 
-    // pending     = not paid yet
-    // partial     = deposit paid
-    // paid        = fully paid
-    // refunded    = refunded from Stripe
     paymentStatus: {
       type: String,
-      enum: ['pending', 'partial', 'paid', 'refunded'],
-      default: 'pending',
+      enum: ["pending", "partial", "paid", "refunded"],
+      default: "pending",
     },
 
-    // pending, confirmed, cancelled
     bookingStatus: {
       type: String,
-      enum: ['pending', 'confirmed', 'cancelled'],
-      default: 'pending',
+      enum: ["pending", "confirmed", "cancelled"],
+      default: "pending",
     },
 
-    // Stripe identifiers
-    stripeSessionId: String,
-    stripePaymentIntentId: String,
+    bookingNumber: {
+      type: String,
+      required: [true, "Booking Number is required"],
+    },
 
-    // Refund info
+    stripeSessionId: {
+      type: String,
+      sparse: true,
+    },
+
+    stripePaymentIntentId: {
+      type: String,
+      sparse: true,
+    },
+
     refundAmount: {
       type: Number,
       default: 0,
+      min: [0, "Refund amount cannot be negative"],
     },
-    refundDate: Date,
 
-    // Optional: for multi-day trips or packages
-    dateFrom: Date,
-    dateTo: Date,
+    refundDate: {
+      type: Date,
+      validate: {
+        validator: function (val) {
+          return !val || val instanceof Date;
+        },
+        message: "Invalid refund date",
+      },
+    },
 
-    // Payment method
+    dateFrom: {
+      type: Date,
+      required: [
+        function () {
+          return this.dateTo;
+        },
+        "dateFrom is required when dateTo is provided",
+      ],
+    },
+
+    dateTo: {
+      type: Date,
+      validate: {
+        validator: function (val) {
+          return !val || (this.dateFrom && val >= this.dateFrom);
+        },
+        message: "dateTo must be greater than or equal to dateFrom",
+      },
+    },
+
     paymentMethod: {
       type: String,
-      enum: ['cash', 'stripe'],
-      required: true,
+      enum: ["cash", "stripe"],
+      required: [true, "Payment method is required"],
     },
   },
   {
@@ -109,36 +147,119 @@ const bookingSchema = new mongoose.Schema(
   }
 );
 
-/* --------------------------------------------
- * AUTO-CALCULATE PAYMENT LOGIC
- * -------------------------------------------- */
 
-bookingSchema.pre('validate', function (next) {
-  if (!this.totalPrice) return next();
+/* -------------------------------------------------
+ * VIRTUALS
+ * ------------------------------------------------- */
+bookingSchema.virtual("isUpcoming").get(function () {
+  return this.dateFrom && this.dateFrom > new Date();
+});
 
-  if (this.paymentType === 'deposit') {
-    const deposit = this.totalPrice * 0.5;
+/* ============================================================
+   PRICE CALCULATION LOGIC (Trips & Packages)
+   ============================================================ */
+bookingSchema.pre("validate", async function (next) {
+  try {
+    if (!this.item || !this.bookingType) return next();
 
-    // Stripe will pay deposit OR cash deposit
-    this.paidAmount = deposit;
-    this.remainingAmount = this.totalPrice - deposit;
+    let baseItem;
 
-    if (this.paymentMethod === 'stripe') {
-      this.paymentStatus = 'partial';
-    } else if (this.paymentMethod === 'cash') {
-      this.paymentStatus = 'partial';
+    // Load Trip or Package
+    if (this.bookingType === "Trip") {
+      baseItem = await mongoose.model("Trip").findById(this.item);
+    } else {
+      baseItem = await mongoose
+        .model("Package")
+        .findById(this.item)
+        .populate("hotel transportation");
     }
+
+    if (!baseItem) return next(new Error("Invalid Trip/Package reference"));
+
+    const { adults = 0, children = 0, foreigners = 0 } = this.people || {};
+    const totalPeople = adults + children + foreigners;
+
+    let total = 0;
+
+    /* ------------------ TRIP PRICING ------------------ */
+    if (this.bookingType === "Trip") {
+      const adultPrice = baseItem.price;
+      const childPrice = adultPrice * 1;       // children 100% of adult
+      const foreignerPrice = adultPrice * 1.4; // +40% for foreigners
+      const transportPrice = baseItem.transportation?.price || 0;
+
+      total =
+        adults * adultPrice +
+        children * childPrice +
+        foreigners * foreignerPrice +
+        transportPrice * totalPeople; // transport per person
+    }
+
+    /* ------------------ PACKAGE PRICING ------------------ */
+    if (this.bookingType === "Package") {
+      const basePrice = baseItem.basePrice;
+      const hotelPrice = baseItem.hotel?.price || 0;
+      const transportPrice = baseItem.transportation?.price || 0;
+
+      const adultPrice = basePrice;
+      const childPrice = basePrice - hotelPrice; // children don't pay hotel
+      const foreignerPrice = basePrice * 1.4;   // foreigners +40%
+
+      total =
+        adults * adultPrice +
+        children * childPrice +
+        foreigners * foreignerPrice +
+        transportPrice * totalPeople; // transport per person
+    }
+
+    this.totalPrice = total;
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+
+/* ============================================================
+    PAYMENT CALCULATION LOGIC
+   ============================================================ */
+bookingSchema.pre("validate", function (next) {
+  if (!this.totalPrice || !this.paymentType) {
+    this.paidAmount = 0;
+    this.remainingAmount = 0;
+    return next();
   }
 
-  if (this.paymentType === 'full') {
+  if (this.paymentType === "full") {
     this.paidAmount = this.totalPrice;
     this.remainingAmount = 0;
-    this.paymentStatus = 'paid';
+  } else if (this.paymentType === "deposit") {
+    this.paidAmount = this.totalPrice * 0.3; // deposit = 30%
+    this.remainingAmount = this.totalPrice - this.paidAmount;
+  } else {
+    this.paidAmount = 0;
+    this.remainingAmount = this.totalPrice;
   }
 
   next();
 });
 
-const BookingModel = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
+
+/* -------------------------------------------------
+ * INSTANCE METHOD: Can be refunded?
+ * ------------------------------------------------- */
+bookingSchema.methods.canRefund = function () {
+  return this.paymentStatus === "paid" || this.paymentStatus === "partial";
+};
+
+/* -------------------------------------------------
+ * INDEXES FOR PERFORMANCE
+ * ------------------------------------------------- */
+bookingSchema.index({ user: 1, createdAt: -1 });
+bookingSchema.index({ bookingType: 1, item: 1 });
+
+const BookingModel =
+  mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 
 export default BookingModel;

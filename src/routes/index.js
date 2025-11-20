@@ -7,7 +7,7 @@ import tripRoute from './tripRoute.js';
 import packageRoute from './packageRoute.js';
 import destinationRoute from './destinationRoute.js';
 import bookingRoute from './bookingRoute.js';
-import { webhookCheckout } from '../services/bookingService.js';
+// import { webhookCheckout } from '../services/bookingService.js';
 import faqRoute from './faq.route.js';
 
 import express from 'express';
@@ -28,7 +28,7 @@ const mountRoutes = (app) => {
   });
 
   // Stripe Webhook (raw body)
-  app.post('/webhook-checkout', express.raw({ type: 'application/json' }), webhookCheckout);
+  // app.post('/webhook-checkout', express.raw({ type: 'application/json' }), webhookCheckout);
 
   app.use('/api/v1/users', userRoute);
   app.use('/api/v1/auth', authRoute);
