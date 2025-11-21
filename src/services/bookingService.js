@@ -128,7 +128,7 @@ export const bookingWebhookHandler = async (req, res) => {
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error("❌ Webhook Signature Verification Failed:", err.message);
+    console.error("Webhook Signature Verification Failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -141,7 +141,7 @@ export const bookingWebhookHandler = async (req, res) => {
     try {
       await handleStripeBookingCreate(session);
     } catch (err) {
-      console.error("❌ Stripe booking handler error:", err);
+      console.error("Stripe booking handler error:", err);
     }
   }
 
@@ -164,14 +164,14 @@ const handleStripeBookingCreate = async (session) => {
   // Who paid?
   const user = await UserModel.findById(userId);
   if (!user) {
-    console.error("❌ Webhook Error: User not found.");
+    console.error("Webhook Error: User not found.");
     return;
   }
 
   // Prevent duplicate booking creation
   const existing = await BookingModel.findOne({ stripeSessionId: session.id });
   if (existing) {
-    console.log("ℹ Booking already created for this session. Skipping.");
+    console.log("Booking already created for this session. Skipping.");
     return;
   }
 

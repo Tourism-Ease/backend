@@ -14,6 +14,7 @@ import globalError from './middlewares/errorMiddleware.js';
 import mountRoutes from './routes/index.js';
 import './config/passport.js';
 import { dbMiddleware } from './middlewares/dbMiddleware.js';
+import { bookingWebhookHandler } from './services/bookingService.js';
 
 const app = express();
 
@@ -29,6 +30,16 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 app.use(compression());
+
+// -------------------------------
+// Stripe webhook must come BEFORE express.json()
+// -------------------------------
+app.post(
+  '/api/v1/bookings/webhook',
+  express.raw({ type: 'application/json' }),
+  bookingWebhookHandler
+);
+
 app.use(express.json({ limit: '20kb' }));
 app.use(cookieParser());
 app.use(mongoSanitize());
@@ -59,7 +70,7 @@ app.use(hpp({ whitelist: ['price', 'sold', 'quantity', 'avgRating'] }));
 app.use(passport.initialize());
 
 // ===============================
-// 🚏 ROUTES
+//  ROUTES
 // ===============================
 mountRoutes(app);
 
