@@ -37,6 +37,7 @@ app.use(compression());
 app.post(
   '/api/v1/bookings/webhook',
   express.raw({ type: 'application/json' }),
+  dbMiddleware,
   bookingWebhookHandler
 );
 
