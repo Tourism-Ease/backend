@@ -41,7 +41,7 @@ export const createBooking = asyncHandler(async (req, res, next) => {
   session.startTransaction();
 
   try {
-    const userId = req.user._id;
+    const userId = req.user._id.toString();
     const { itemId, bookingType, paymentType, dateFrom, dateTo, paymentMethod, counts } = req.body;
 
     if (!['Trip', 'Package'].includes(bookingType)) throw new APIError('Invalid bookingType', 400);
@@ -117,89 +117,110 @@ export const createBooking = asyncHandler(async (req, res, next) => {
 });
 
 
-// export const createBooking = asyncHandler(async (req, res, next) => {
-//   const session = await mongoose.startSession();
-//   session.startTransaction();
+export const bookingWebhookHandler = async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
 
-//   try {
-//     const userId = req.user._id;
-//     const { itemId, bookingType, paymentType, dateFrom, dateTo, paymentMethod, counts } = req.body;
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error("❌ Webhook Signature Verification Failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
 
-//     if (!['Trip', 'Package'].includes(bookingType)) throw new APIError('Invalid bookingType', 400);
-//     if (!['cash', 'stripe'].includes(paymentMethod)) throw new APIError('Invalid paymentMethod', 400);
+  // ---------------------------------------------------------
+  // HANDLE SUCCESSFUL STRIPE CHECKOUT
+  // ---------------------------------------------------------
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
 
-//     // Prevent past bookings  
-//     if (new Date(dateFrom) < new Date()) throw new APIError('Cannot book past dates', 400);
+    try {
+      await handleStripeBookingCreate(session);
+    } catch (err) {
+      console.error("❌ Stripe booking handler error:", err);
+    }
+  }
 
-//     const model = bookingType === 'Trip' ? TripModel : PackageModel;
-//     const item = await model.findById(itemId);
-//     if (!item) throw new APIError(`No ${bookingType} found`, 404);
-
-//     // Prevent double bookings  
-//     // const existing = await BookingModel.findOne({ user: userId, item: itemId, dateFrom });
-//     // if (existing) throw new APIError('You already booked this trip/package for this date', 400);
+  res.status(200).json({ received: true });
+};
 
 
-//     // --------------------- CASH ---------------------  
-//     if (paymentMethod === 'cash') {
-//       const booking = await BookingModel.create([{
-//         user: userId,
-//         bookingType,
-//         item: itemId,
-//         quantity: counts.adults + counts.children + counts.foreigners,
-//         counts,
-//         paymentType,
-//         totalPrice,
-//         paidAmount: paymentType === 'full' ? totalPrice : totalPrice * 0.5,
-//         remainingAmount: paymentType === 'full' ? 0 : totalPrice * 0.5,
-//         paymentStatus: paymentType === 'full' ? 'paid' : 'partial',
-//         bookingStatus: 'pending',
-//         dateFrom,
-//         dateTo,
-//         paymentMethod: 'cash',
-//         bookingNumber: generateBookingNumber(),
-//       }], { session });
+const handleStripeBookingCreate = async (session) => {
+  const {
+    bookingType,
+    counts,
+    paymentType,
+    dateFrom,
+    dateTo,
+    userId,
+  } = session.metadata;
 
-//       await sendEmail(req.user.email, 'Booking Created', `Your booking for ${item.title} is waiting for cash payment.`);
+  const itemId = session.client_reference_id;
 
-//       await session.commitTransaction();
-//       session.endSession();
-//       return res.status(201).json({ status: 'success', data: booking[0] });
-//     }
+  // Who paid?
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    console.error("❌ Webhook Error: User not found.");
+    return;
+  }
 
-//     // --------------------- STRIPE ---------------------  
-//     let stripeAmount = totalPrice;
-//     if (paymentType === 'deposit') stripeAmount = totalPrice * 0.5;
+  // Prevent duplicate booking creation
+  const existing = await BookingModel.findOne({ stripeSessionId: session.id });
+  if (existing) {
+    console.log("ℹ Booking already created for this session. Skipping.");
+    return;
+  }
 
-//     const stripeSession = await stripe.checkout.sessions.create({
-//       line_items: [{
-//         price_data: {
-//           currency: 'egp',
-//           unit_amount: Math.round(stripeAmount * 100),
-//           product_data: { name: `${bookingType.toUpperCase()} - ${item.title}` },
-//         },
-//         quantity: 1,
-//       }],
-//       mode: 'payment',
-//       success_url: `${process.env.FRONTEND_URL}/payment/success`,
-//       cancel_url: `${process.env.FRONTEND_URL}/pay`,
-//       customer_email: req.user.email,
-//       client_reference_id: itemId,
-//       metadata: {
-//         bookingType, counts: JSON.stringify(counts), paymentType, dateFrom, dateTo, totalPrice, userId,
-//       },
-//     });
+  const stripePaidAmount = session.amount_total / 100;
 
-//     await session.commitTransaction();
-//     session.endSession();
-//     res.status(200).json({ status: 'success', sessionUrl: stripeSession.url });
+  // Calculate deposit / full logic
+  let paidAmount = stripePaidAmount;
+  let remainingAmount = 0;
+  let paymentStatus = "paid";
 
-//   } catch (err) {
-//     await session.abortTransaction();
-//     session.endSession();
-//     next(err);
-//   }
-// });
+  if (paymentType === "deposit") {
+    const calcDeposit = stripePaidAmount; // deposit already paid
+    remainingAmount = session.amount_subtotal / 100 - calcDeposit;
+    paidAmount = calcDeposit;
+    paymentStatus = "partial";
+  }
+
+  // Create the booking
+  const booking = await BookingModel.create({
+    user: user._id,
+    bookingType,
+    item: itemId,
+    people: JSON.parse(counts),
+    paymentType,
+    paymentMethod: "stripe",
+    dateFrom,
+    dateTo,
+    paidAmount,
+    remainingAmount,
+    paymentStatus,
+    bookingStatus: "confirmed",
+    bookingNumber: "BKG-" + Date.now(),
+
+    // Stripe data
+    stripeSessionId: session.id,
+    stripePaymentIntentId: session.payment_intent,
+  });
+
+  console.log("✅ Booking created via Stripe webhook:", booking._id);
+
+  // Send confirmation email
+  await sendEmail(
+    user.email,
+    "Booking Confirmed",
+    `Your booking is confirmed. Paid: ${paidAmount} EGP.`
+  );
+};
+
+
 
 
 export const cancelBooking = asyncHandler(async (req, res, next) => {
@@ -230,11 +251,9 @@ export const cancelBooking = asyncHandler(async (req, res, next) => {
   }
 });
 
-/* -------------------------------------------------------------
 
-CONFIRM BOOKING (Admin)
+// CONFIRM BOOKING (Admin)
 
-------------------------------------------------------------- */
 export const confirmBooking = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const booking = await BookingModel.findById(id);

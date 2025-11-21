@@ -8,11 +8,22 @@ import {
   cancelBooking,
   confirmBooking,
   payRemainingAmount,
+  bookingWebhookHandler,
 } from '../services/bookingService.js';
 
 import { protect, allowedTo } from '../services/authService.js';
 
 const router = express.Router();
+
+
+
+
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  bookingWebhookHandler
+);
+
 
 // ----------------------------
 // PROTECTED ROUTES

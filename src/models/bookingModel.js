@@ -155,9 +155,7 @@ bookingSchema.virtual("isUpcoming").get(function () {
   return this.dateFrom && this.dateFrom > new Date();
 });
 
-/* ============================================================
-   PRICE CALCULATION LOGIC (Trips & Packages)
-   ============================================================ */
+//  PRICE CALCULATION LOGIC(Trips & Packages) with Foreigners 40 % on total
 bookingSchema.pre("validate", async function (next) {
   try {
     if (!this.item || !this.bookingType) return next();
@@ -184,32 +182,47 @@ bookingSchema.pre("validate", async function (next) {
     /* ------------------ TRIP PRICING ------------------ */
     if (this.bookingType === "Trip") {
       const adultPrice = baseItem.price;
-      const childPrice = adultPrice * 1;       // children 100% of adult
-      const foreignerPrice = adultPrice * 1.4; // +40% for foreigners
+      const childPrice = adultPrice * 1; // children 100%
       const transportPrice = baseItem.transportation?.price || 0;
 
-      total =
-        adults * adultPrice +
-        children * childPrice +
-        foreigners * foreignerPrice +
-        transportPrice * totalPeople; // transport per person
+      const adultTotal = adults * (adultPrice + transportPrice);
+      const childTotal = children * (childPrice + transportPrice);
+      const foreignersBaseTotal = foreigners * (adultPrice + transportPrice);
+      const foreignersTotal = foreignersBaseTotal * 1.4; // 40% extra on everything
+
+      total = adultTotal + childTotal + foreignersTotal;
     }
 
     /* ------------------ PACKAGE PRICING ------------------ */
     if (this.bookingType === "Package") {
-      const basePrice = baseItem.basePrice;
-      const hotelPrice = baseItem.hotel?.price || 0;
+      // const basePrice = baseItem.basePrice;
+      // const hotelPrice = baseItem.hotel?.price || 0;
       const transportPrice = baseItem.transportation?.price || 0;
 
-      const adultPrice = basePrice;
-      const childPrice = basePrice - hotelPrice; // children don't pay hotel
-      const foreignerPrice = basePrice * 1.4;   // foreigners +40%
 
-      total =
-        adults * adultPrice +
-        children * childPrice +
-        foreigners * foreignerPrice +
-        transportPrice * totalPeople; // transport per person
+      const adultPrice = baseItem.totalPrice;
+      const childPrice = transportPrice; // children only pay transportation
+      const foreignersPrice = adultPrice * 1.4; // 40% extra
+
+
+
+
+
+      const adultTotal = parseFloat(adultPrice * adults)
+      const childTotal = parseFloat(childPrice * children)
+      const foreignersTotal = parseFloat(foreignersPrice * foreigners)
+
+      console.log('adult', adultTotal);
+      console.log('child', transportPrice);
+      console.log('foreigner', foreignersTotal);
+
+      total = adultTotal + childTotal + foreignersTotal;
+
+      console.log(total);
+
+      // adult => 10200
+      // forigner => 14280
+      // children => 1200
     }
 
     this.totalPrice = total;
@@ -219,6 +232,7 @@ bookingSchema.pre("validate", async function (next) {
     next(err);
   }
 });
+
 
 
 /* ============================================================
