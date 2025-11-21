@@ -1,10 +1,11 @@
-import { deleteCloudinaryImages } from '../middlewares/deleteImageMiddleware.js';
-import { resizeMixOfImages } from '../middlewares/resizeImageMiddleware.js';
-import { uploadMultipleImages } from '../middlewares/uploadImageMiddleware.js';
-import PackageModel from '../models/packageModel.js';
-import RoomTypeModel from '../models/roomTypeModel.js';
-import * as factory from './handlerFactory.js';
 import asyncHandler from 'express-async-handler';
+import PackageModel from '../models/packageModel.js';
+
+import * as factory from './handlerFactory.js';
+
+import { uploadMultipleImages } from '../middlewares/uploadImageMiddleware.js';
+import { resizeMixOfImages } from '../middlewares/resizeImageMiddleware.js';
+import { deleteCloudinaryImages } from '../middlewares/deleteImageMiddleware.js';
 
 export const uploadPackageImages = uploadMultipleImages([
   { name: 'imageCover', maxCount: 1 },
@@ -15,19 +16,42 @@ export const resizePackageImages = resizeMixOfImages('packages', 'package', 'ima
 export const deletePackageImages = deleteCloudinaryImages();
 
 export const createPackage = asyncHandler(async (req, res, next) => {
-  const { basePrice, roomTypes, transportation } = req.body;
+  // Parse nested JSON fields coming from form-data
+  if (req.body.pickupLocations) req.body.pickupLocations = JSON.parse(req.body.pickupLocations);
+  if (req.body.itinerary) req.body.itinerary = JSON.parse(req.body.itinerary);
+  if (req.body.packageTransportation) req.body.packageTransportation = JSON.parse(req.body.packageTransportation);
 
-  // Transportation price
-  const transportationPrice = transportation?.price || 0;
 
-  // Set totalPrice before calling factory
-  req.body.totalPrice = Number(basePrice) + transportationPrice;
+  // Call the factory function directly with req/res
+  const document = await PackageModel.create(req.body);
+  await document.save();
 
-  // Call the generic createOne factory
-  return factory.createOne(PackageModel)(req, res, next);
+  res.status(201).json({ status: 'success', data: document });
 });
-export const getPackages = factory.getAll(PackageModel);
-export const getPackageById = factory.getOneById(PackageModel);
+
+
+export const getPackages = factory.getAll(PackageModel, [
+  {
+    path: 'destination',
+    select: 'name' // only include name and country, exclude _id
+  },
+  {
+    path: 'hotel',
+    select: 'name stars imageCover location propertyHighlights' // include only these fields
+  }
+]);
+
+export const getPackageById = factory.getOneById(PackageModel, [
+  {
+    path: 'destination',
+    select: 'name' // only include name and country, exclude _id
+  },
+  {
+    path: 'hotel',
+    select: 'name stars imageCover location propertyHighlights' // include only these fields
+  }
+]);
+
 export const updatePackageById = factory.updateOneWithMultipleImages(
   PackageModel,
   'imageCover',

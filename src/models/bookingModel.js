@@ -22,46 +22,46 @@ const bookingSchema = new mongoose.Schema(
       index: true,
     },
 
-    people: {
-      adults: {
-        type: Number,
-        required: true,
-        min: [1, "At least one adult is required"],
+    // Snapshot of booking info at the time of booking
+    snapshot: {
+      title: String,
+      departureDate: Date,
+      durationDays: Number,      // for package
+      pickUp: {                  // only for package, optional for trip
+        city: String,
+        place: String,
+        time: String,
+        priceAdjustment: Number,
       },
-      children: {
-        type: Number,
-        default: 0,
-        min: 0,
-      },
-      foreigners: {
-        type: Number,
-        default: 0,
-        min: 0,
+      priceBreakdown: {
+        adult: Number,
+        foreigner: Number,
+        child: Number,
+        infant: Number,
       },
     },
 
-    totalPrice: {
-      type: Number,
-      required: [true, "Total price is required"],
-      min: [0, "Total price cannot be negative"],
+    people: {
+      adults: { type: Number, required: true, min: 1 },
+      children: { type: Number, default: 0, min: 0 }, // with seat
+      infants: { type: Number, default: 0, min: 0 },  // free
+      foreigners: { type: Number, default: 0, min: 0 },
     },
+
+    totalPrice: { type: Number, required: true, min: 0 },
 
     paymentType: {
       type: String,
       enum: ["full", "deposit"],
       required: [true, "Payment type is required"],
     },
+    paidAmount: { type: Number, default: 0, min: 0 },
+    remainingAmount: { type: Number, default: 0, min: 0 },
 
-    paidAmount: {
-      type: Number,
-      default: 0,
-      min: [0, "Paid amount cannot be negative"],
-    },
-
-    remainingAmount: {
-      type: Number,
-      default: 0,
-      min: [0, "Remaining amount cannot be negative"],
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "stripe"],
+      required: true,
     },
 
     paymentStatus: {
@@ -72,174 +72,42 @@ const bookingSchema = new mongoose.Schema(
 
     bookingStatus: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled"],
+      enum: ["pending", "confirmed", "cancelled", "expired"],
       default: "pending",
     },
 
-    bookingNumber: {
-      type: String,
-      required: [true, "Booking Number is required"],
-    },
+    bookingNumber: { type: String, required: true },
 
-    stripeSessionId: {
-      type: String,
-      sparse: true,
-    },
+    stripeSessionId: { type: String, sparse: true },
+    stripePaymentIntentId: { type: String, sparse: true },
 
-    stripePaymentIntentId: {
-      type: String,
-      sparse: true,
-    },
+    refundAmount: { type: Number, default: 0, min: 0 },
+    refundDate: { type: Date },
 
-    refundAmount: {
-      type: Number,
-      default: 0,
-      min: [0, "Refund amount cannot be negative"],
-    },
+    bookingDate: { type: Date },
 
-    refundDate: {
-      type: Date,
-      validate: {
-        validator: function (val) {
-          return !val || val instanceof Date;
-        },
-        message: "Invalid refund date",
-      },
-    },
-
-    dateFrom: {
-      type: Date,
-      required: [
-        function () {
-          return this.dateTo;
-        },
-        "dateFrom is required when dateTo is provided",
-      ],
-    },
-
-    dateTo: {
-      type: Date,
-      validate: {
-        validator: function (val) {
-          return !val || (this.dateFrom && val >= this.dateFrom);
-        },
-        message: "dateTo must be greater than or equal to dateFrom",
-      },
-    },
-
-    paymentMethod: {
-      type: String,
-      enum: ["cash", "stripe"],
-      required: [true, "Payment method is required"],
-    },
+    // Optional expiry for unpaid bookings (TTL index can auto-remove)
+    expiresAt: { type: Date, index: { expireAfterSeconds: 0 } },
   },
   {
     timestamps: true,
     versionKey: false,
-    toJSON: {
-      virtuals: true,
-      transform: (doc, ret) => {
-        ret.id = ret._id.toString();
-        delete ret._id;
-        return ret;
-      },
-    },
+    toJSON: { virtuals: true },
   }
 );
 
-
-/* -------------------------------------------------
- * VIRTUALS
- * ------------------------------------------------- */
+/* --------------------
+ * Virtuals
+ * -------------------- */
 bookingSchema.virtual("isUpcoming").get(function () {
   return this.dateFrom && this.dateFrom > new Date();
 });
 
-//  PRICE CALCULATION LOGIC(Trips & Packages) with Foreigners 40 % on total
-bookingSchema.pre("validate", async function (next) {
-  try {
-    if (!this.item || !this.bookingType) return next();
-
-    let baseItem;
-
-    // Load Trip or Package
-    if (this.bookingType === "Trip") {
-      baseItem = await mongoose.model("Trip").findById(this.item);
-    } else {
-      baseItem = await mongoose
-        .model("Package")
-        .findById(this.item)
-        .populate("hotel transportation");
-    }
-
-    if (!baseItem) return next(new Error("Invalid Trip/Package reference"));
-
-    const { adults = 0, children = 0, foreigners = 0 } = this.people || {};
-    const totalPeople = adults + children + foreigners;
-
-    let total = 0;
-
-    /* ------------------ TRIP PRICING ------------------ */
-    if (this.bookingType === "Trip") {
-      const adultPrice = baseItem.price;
-      const childPrice = adultPrice * 1; // children 100%
-      const transportPrice = baseItem.transportation?.price || 0;
-
-      const adultTotal = adults * (adultPrice + transportPrice);
-      const childTotal = children * (childPrice + transportPrice);
-      const foreignersBaseTotal = foreigners * (adultPrice + transportPrice);
-      const foreignersTotal = foreignersBaseTotal * 1.4; // 40% extra on everything
-
-      total = adultTotal + childTotal + foreignersTotal;
-    }
-
-    /* ------------------ PACKAGE PRICING ------------------ */
-    if (this.bookingType === "Package") {
-      // const basePrice = baseItem.basePrice;
-      // const hotelPrice = baseItem.hotel?.price || 0;
-      const transportPrice = baseItem.transportation?.price || 0;
-
-
-      const adultPrice = baseItem.totalPrice;
-      const childPrice = transportPrice; // children only pay transportation
-      const foreignersPrice = adultPrice * 1.4; // 40% extra
-
-
-
-
-
-      const adultTotal = parseFloat(adultPrice * adults)
-      const childTotal = parseFloat(childPrice * children)
-      const foreignersTotal = parseFloat(foreignersPrice * foreigners)
-
-      console.log('adult', adultTotal);
-      console.log('child', transportPrice);
-      console.log('foreigner', foreignersTotal);
-
-      total = adultTotal + childTotal + foreignersTotal;
-
-      console.log(total);
-
-      // adult => 10200
-      // forigner => 14280
-      // children => 1200
-    }
-
-    this.totalPrice = total;
-
-    next();
-  } catch (err) {
-    next(err);
-  }
-});
-
-
-
-/* ============================================================
-    PAYMENT CALCULATION LOGIC
-   ============================================================ */
+/* --------------------
+ * Pre-validate: calculate paid/remaining
+ * -------------------- */
 bookingSchema.pre("validate", function (next) {
-  if (!this.totalPrice || !this.paymentType) {
+  if (!this.totalPrice) {
     this.paidAmount = 0;
     this.remainingAmount = 0;
     return next();
@@ -249,7 +117,7 @@ bookingSchema.pre("validate", function (next) {
     this.paidAmount = this.totalPrice;
     this.remainingAmount = 0;
   } else if (this.paymentType === "deposit") {
-    this.paidAmount = this.totalPrice * 0.3; // deposit = 30%
+    this.paidAmount = this.totalPrice * 0.5;
     this.remainingAmount = this.totalPrice - this.paidAmount;
   } else {
     this.paidAmount = 0;
@@ -259,17 +127,16 @@ bookingSchema.pre("validate", function (next) {
   next();
 });
 
-
-/* -------------------------------------------------
- * INSTANCE METHOD: Can be refunded?
- * ------------------------------------------------- */
+/* --------------------
+ * Instance method: can refund
+ * -------------------- */
 bookingSchema.methods.canRefund = function () {
-  return this.paymentStatus === "paid" || this.paymentStatus === "partial";
+  return ["paid", "partial"].includes(this.paymentStatus);
 };
 
-/* -------------------------------------------------
- * INDEXES FOR PERFORMANCE
- * ------------------------------------------------- */
+/* --------------------
+ * Indexes
+ * -------------------- */
 bookingSchema.index({ user: 1, createdAt: -1 });
 bookingSchema.index({ bookingType: 1, item: 1 });
 
