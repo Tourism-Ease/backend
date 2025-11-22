@@ -4,141 +4,143 @@ const bookingSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+      ref: "User",
+      required: [true, "User is required"],
+      index: true,
     },
 
-    // Booking can be for Trip or Package
     bookingType: {
       type: String,
-      enum: ['Trip', 'Package'],
-      required: true,
+      enum: ["Trip", "Package"],
+      required: [true, "Booking type is required"],
     },
 
-    // Dynamic reference to Trip or Package
     item: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      refPath: 'bookingType',
+      refPath: "bookingType",
+      required: [true, "Item reference is required"],
+      index: true,
     },
 
-    quantity: {
-      type: Number,
-      default: 1,
-      min: 1,
+    // Snapshot of booking info at the time of booking
+    snapshot: {
+      title: String,
+      departureDate: Date,
+      durationDays: Number,      // for package
+      pickUp: {                  // only for package, optional for trip
+        city: String,
+        place: String,
+        time: String,
+        priceAdjustment: Number,
+      },
+      priceBreakdown: {
+        adult: Number,
+        foreigner: Number,
+        child: Number,
+        infant: Number,
+      },
     },
 
-    // Total full price for booking
-    totalPrice: {
-      type: Number,
-      required: true,
-      min: 0,
+    people: {
+      adults: { type: Number, required: true, min: 1 },
+      children: { type: Number, default: 0, min: 0 }, // with seat
+      infants: { type: Number, default: 0, min: 0 },  // free
+      foreigners: { type: Number, default: 0, min: 0 },
     },
 
-    // full = pay 100%
-    // deposit = pay 50%
+    totalPrice: { type: Number, required: true, min: 0 },
+
     paymentType: {
       type: String,
-      enum: ['full', 'deposit'],
-      required: true,
+      enum: ["full", "deposit"],
+      required: [true, "Payment type is required"],
     },
+    paidAmount: { type: Number, default: 0, min: 0 },
+    remainingAmount: { type: Number, default: 0, min: 0 },
 
-    // Paid online or cash (calculated automatically)
-    paidAmount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    remainingAmount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    // pending     = not paid yet
-    // partial     = deposit paid
-    // paid        = fully paid
-    // refunded    = refunded from Stripe
-    paymentStatus: {
-      type: String,
-      enum: ['pending', 'partial', 'paid', 'refunded'],
-      default: 'pending',
-    },
-
-    // pending, confirmed, cancelled
-    bookingStatus: {
-      type: String,
-      enum: ['pending', 'confirmed', 'cancelled'],
-      default: 'pending',
-    },
-
-    // Stripe identifiers
-    stripeSessionId: String,
-    stripePaymentIntentId: String,
-
-    // Refund info
-    refundAmount: {
-      type: Number,
-      default: 0,
-    },
-    refundDate: Date,
-
-    // Optional: for multi-day trips or packages
-    dateFrom: Date,
-    dateTo: Date,
-
-    // Payment method
     paymentMethod: {
       type: String,
-      enum: ['cash', 'stripe'],
+      enum: ["cash", "stripe"],
       required: true,
     },
+
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "partial", "paid", "refunded"],
+      default: "pending",
+    },
+
+    bookingStatus: {
+      type: String,
+      enum: ["pending", "confirmed", "cancelled", "expired"],
+      default: "pending",
+    },
+
+    bookingNumber: { type: String, required: true },
+
+    stripeSessionId: { type: String, sparse: true },
+    stripePaymentIntentId: { type: String, sparse: true },
+
+    refundAmount: { type: Number, default: 0, min: 0 },
+    refundDate: { type: Date },
+
+    bookingDate: { type: Date },
+
+    // Optional expiry for unpaid bookings (TTL index can auto-remove)
+    expiresAt: { type: Date, index: { expireAfterSeconds: 0 } },
   },
   {
     timestamps: true,
     versionKey: false,
-    toJSON: {
-      virtuals: true,
-      transform: (doc, ret) => {
-        ret.id = ret._id.toString();
-        delete ret._id;
-        return ret;
-      },
-    },
+    toJSON: { virtuals: true },
   }
 );
 
-/* --------------------------------------------
- * AUTO-CALCULATE PAYMENT LOGIC
- * -------------------------------------------- */
+/* --------------------
+ * Virtuals
+ * -------------------- */
+bookingSchema.virtual("isUpcoming").get(function () {
+  return this.dateFrom && this.dateFrom > new Date();
+});
 
-bookingSchema.pre('validate', function (next) {
-  if (!this.totalPrice) return next();
-
-  if (this.paymentType === 'deposit') {
-    const deposit = this.totalPrice * 0.5;
-
-    // Stripe will pay deposit OR cash deposit
-    this.paidAmount = deposit;
-    this.remainingAmount = this.totalPrice - deposit;
-
-    if (this.paymentMethod === 'stripe') {
-      this.paymentStatus = 'partial';
-    } else if (this.paymentMethod === 'cash') {
-      this.paymentStatus = 'partial';
-    }
+/* --------------------
+ * Pre-validate: calculate paid/remaining
+ * -------------------- */
+bookingSchema.pre("validate", function (next) {
+  if (!this.totalPrice) {
+    this.paidAmount = 0;
+    this.remainingAmount = 0;
+    return next();
   }
 
-  if (this.paymentType === 'full') {
+  if (this.paymentType === "full") {
     this.paidAmount = this.totalPrice;
     this.remainingAmount = 0;
-    this.paymentStatus = 'paid';
+  } else if (this.paymentType === "deposit") {
+    this.paidAmount = this.totalPrice * 0.5;
+    this.remainingAmount = this.totalPrice - this.paidAmount;
+  } else {
+    this.paidAmount = 0;
+    this.remainingAmount = this.totalPrice;
   }
 
   next();
 });
 
-const BookingModel = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
+/* --------------------
+ * Instance method: can refund
+ * -------------------- */
+bookingSchema.methods.canRefund = function () {
+  return ["paid", "partial"].includes(this.paymentStatus);
+};
+
+/* --------------------
+ * Indexes
+ * -------------------- */
+bookingSchema.index({ user: 1, createdAt: -1 });
+bookingSchema.index({ bookingType: 1, item: 1 });
+
+const BookingModel =
+  mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 
 export default BookingModel;

@@ -11,18 +11,29 @@ const tripSchema = new mongoose.Schema(
       maxlength: [100, 'Trip title must be at most 100 characters'],
       trim: true,
     },
+
     destination: {
-      type: String,
-      required: [true, 'Destination is required'],
-      minlength: [2, 'Destination must be at least 2 characters'],
-      maxlength: [100, 'Destination must be at most 100 characters'],
-      trim: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Destination',
+      required: [true, 'Destination ID is required'],
     },
-    price: {
+
+    egyptianPrice: {
       type: Number,
       required: [true, 'Trip price is required'],
       min: [0, 'Price must be a positive number'],
     },
+
+    childrenPrice: {
+      type: Number,
+      min: [0, 'Price must be a positive number'],
+    },
+
+    foreignerPrice: {
+      type: Number,
+      min: [0, 'Price must be a positive number'],
+    },
+
     duration: {
       type: String,
       required: [true, 'Duration is required'],
@@ -31,10 +42,18 @@ const tripSchema = new mongoose.Schema(
       maxlength: [50, 'Duration must be at most 50 characters'],
     },
     pickUp: {
-      type: String,
-      default: '07:30 AM Hotel Pickup',
-      trim: true,
+      time: {
+        type: String,
+        default: '07:30 AM',
+        trim: true,
+      },
+      place: {
+        type: String,
+        default: 'Hotel Pickup',
+        trim: true,
+      },
     },
+
     overview: {
       type: String,
       trim: true,
@@ -60,18 +79,7 @@ const tripSchema = new mongoose.Schema(
         message: 'Maximum 10 items are allowed in whatToBring',
       },
     },
-    transportation: {
-      transportationId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Transportation',
-        required: [true, 'Transportation reference is required'],
-      },
-      price: {
-        type: Number,
-        required: [true, 'Transportation price is required'],
-        min: [0, 'Transportation price must be a positive number'],
-      },
-    },
+    
     imageCover: { type: String, required: true },
     images: {
       type: [String],
@@ -97,20 +105,56 @@ const tripSchema = new mongoose.Schema(
   }
 );
 
-// Virtual to expose imageCoverUrl and imagesUrls using your getImageUrl util
+// Virtuals for images
 tripSchema.virtual('imageCoverUrl').get(function () {
-  if (this.imageCover) {
-    return getImageUrl(this.imageCover);
-  }
-  return null;
+  return this.imageCover ? getImageUrl(this.imageCover) : null;
 });
 
 tripSchema.virtual('imagesUrls').get(function () {
-  if (this.images && this.images.length) {
-    return this.images.map((pid) => getImageUrl(pid));
-  }
-  return [];
+  return this.images?.length ? this.images.map(getImageUrl) : [];
 });
+
+
+/* ============================================================
+   INSTANCE METHOD: Calculate total price for given passengers
+============================================================ */
+tripSchema.methods.calculatePrice = function ({
+  adults = 0,
+  children = 0,
+  foreigners = 0,
+  infants = 0, // still free
+} = {}) {
+  // Base prices (fallbacks identical to logic used before)
+  const adultPrice = this.egyptianPrice ?? this.totalPrice;
+  const childPrice = this.childrenPrice ?? adultPrice;
+  const foreignerPrice = this.foreignerPrice ?? adultPrice;
+
+  // Calculations
+  const adultTotal = adults * adultPrice;
+  const childrenTotal = children * childPrice;
+  const foreignerTotal = foreigners * foreignerPrice;
+  const infantsTotal = 0; // always free
+
+  const total = adultTotal + childrenTotal + foreignerTotal;
+
+  return {
+    adults,
+    children,
+    foreigners,
+    infants,
+    total,
+    breakdown: {
+      adultTotal,
+      childrenTotal,
+      foreignerTotal,
+      infantsTotal,
+    },
+  };
+};
+
+
+
+
 
 const TripModel = mongoose.models.Trip || mongoose.model('Trip', tripSchema);
 export default TripModel;

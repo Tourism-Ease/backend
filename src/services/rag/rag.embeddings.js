@@ -22,7 +22,7 @@ export async function embedText(text) {
     );
 
     // Log to see actual response
-    console.log('Raw Response:', res.data);
+    // console.log('Raw Response:', res.data);
 
     // Handle array response
     if (Array.isArray(res.data)) {
@@ -54,7 +54,7 @@ export async function generateAnswer(question, chunks, lang) {
       }
     );
 
-    console.log('LLM Raw Response:', res.data);
+    // console.log('LLM Raw Response:', res.data);
 
     if (Array.isArray(res.data) && res.data[0]?.generated_text) {
       let answer = res.data[0].generated_text.trim();
@@ -65,7 +65,7 @@ export async function generateAnswer(question, chunks, lang) {
 
     return chunks[0]?.text || 'No answer found.';
   } catch (error) {
-    console.error('LLM Error:', error.response?.data || error.message);
+    // console.error('LLM Error:', error.response?.data || error.message);
     return chunks[0]?.text || 'Error generating answer.';
   }
 }

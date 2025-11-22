@@ -128,9 +128,15 @@ export const login = asyncHandler(async (req, res, next) => {
   const user = await UserModel.findOne({ email });
   if (!user) return next(new APIError('Invalid email or password', 401));
 
+  // Check if email is verified
   if (!user.isEmailVerified)
     return next(new APIError('Please verify your email before logging in', 401));
 
+  // Check if account is active
+  if (!user.active)
+    return next(new APIError('Your account is deactivated. Please reactivate or contact support.', 403));
+  
+  // Check if password is correct
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) return next(new APIError('Invalid email or password', 401));
 

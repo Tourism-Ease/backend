@@ -1,4 +1,4 @@
-import FAQModel from '../../models/faq.model.js';
+import FAQModel from '../../models/faqModel.js';
 import { embedText } from './rag.embeddings.js';
 
 let loaded = false;

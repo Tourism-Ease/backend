@@ -16,6 +16,94 @@ async function seed() {
 
   const faqs = [
     // English FAQs
+
+    {
+      question: 'Hello',
+      answer: 'Hello! How can I assist you today?',
+      tags: ['greeting', 'conversation'],
+      lang: 'en',
+    },
+    {
+      question: 'Hi',
+      answer: 'Hi there! How can I help you?',
+      tags: ['greeting', 'conversation'],
+      lang: 'en',
+    },
+    {
+      question: 'Hey',
+      answer: 'Hey! How can I assist with your travel plans?',
+      tags: ['greeting', 'conversation'],
+      lang: 'en',
+    },
+    {
+      question: 'Good morning',
+      answer: 'Good morning! How can I help you today?',
+      tags: ['greeting', 'conversation'],
+      lang: 'en',
+    },
+    {
+      question: 'Good evening',
+      answer: 'Good evening! What can I help you with?',
+      tags: ['greeting', 'conversation'],
+      lang: 'en',
+    },
+    {
+      question: 'How are you?',
+      answer: "I'm doing great and ready to help you! What can I do for you?",
+      tags: ['smalltalk', 'conversation'],
+      lang: 'en',
+    },
+    {
+      question: "How's it going?",
+      answer: "I'm doing well! How can I assist you today?",
+      tags: ['smalltalk', 'conversation'],
+      lang: 'en',
+    },
+    {
+      question: 'Can you help me?',
+      answer: 'Of course! Tell me what you need help with.',
+      tags: ['help', 'conversation'],
+      lang: 'en',
+    },
+    {
+      question: 'What can you do?',
+      answer:
+        'I can help you explore destinations, browse packages, and answer questions about TourEase.',
+      tags: ['info', 'conversation'],
+      lang: 'en',
+    },
+    {
+      question: 'Who are you?',
+      answer: "I'm the TourEase Assistant — here to help you with all your travel questions!",
+      tags: ['info', 'identity'],
+      lang: 'en',
+    },
+    {
+      question: 'What is TourEase?',
+      answer:
+        'TourEase is a travel platform that helps you explore destinations, book hotels, and find the best packages.',
+      tags: ['info', 'tourEase'],
+      lang: 'en',
+    },
+    {
+      question: 'I need help planning a trip',
+      answer: 'Sure! Tell me your destination and travel dates, and I’ll help you get started.',
+      tags: ['planning', 'help'],
+      lang: 'en',
+    },
+    {
+      question: "I don't understand",
+      answer: 'No problem! Could you repeat or clarify your question?',
+      tags: ['help', 'clarification'],
+      lang: 'en',
+    },
+    {
+      question: 'Explain again',
+      answer: "Sure! Let me know which part you'd like me to explain again.",
+      tags: ['help', 'clarification'],
+      lang: 'en',
+    },
+
     {
       question: 'How do I book a trip?',
       answer:
@@ -621,15 +709,87 @@ async function seed() {
       lang: 'ar',
     },
     {
-      question: 'هل يمكنني الحجز لكبار السن؟',
-      answer: 'نعم، خصومات كبار السن متاحة.',
-      tags: ['senior', 'discount'],
-      lang: 'ar',
-    },
-    {
       question: 'كيف أتتبع حجزي؟',
       answer: 'استخدم رابط التتبع في بريد التأكيد.',
       tags: ['booking', 'track'],
+      lang: 'ar',
+    },
+    {
+      question: 'مرحبا',
+      answer: 'مرحباً! كيف يمكنني مساعدتك اليوم؟',
+      tags: ['greeting', 'conversation'],
+      lang: 'ar',
+    },
+    {
+      question: 'اهلا',
+      answer: 'أهلاً بك! كيف يمكنني خدمتك؟',
+      tags: ['greeting', 'conversation'],
+      lang: 'ar',
+    },
+    {
+      question: 'هاي',
+      answer: 'هاي! كيف أقدر أساعدك؟',
+      tags: ['greeting', 'conversation'],
+      lang: 'ar',
+    },
+    {
+      question: 'صباح الخير',
+      answer: 'صباح النور! كيف أقدر أساعدك اليوم؟',
+      tags: ['greeting', 'conversation'],
+      lang: 'ar',
+    },
+    {
+      question: 'مساء الخير',
+      answer: 'مساء النور! كيف أقدر أساعدك؟',
+      tags: ['greeting', 'conversation'],
+      lang: 'ar',
+    },
+    {
+      question: 'عامل ايه؟',
+      answer: 'تمام الحمدلله! كيف أقدر أساعدك؟',
+      tags: ['smalltalk', 'conversation'],
+      lang: 'ar',
+    },
+    {
+      question: 'ممكن تساعدني؟',
+      answer: 'أكيد! قلّي إنت محتاج مساعدة في إيه.',
+      tags: ['help', 'conversation'],
+      lang: 'ar',
+    },
+    {
+      question: 'ايه تقدر تعمل؟',
+      answer: 'أقدر أساعدك في استكشاف الوجهات، تصفح الباقات، والرد على أي أسئلة عن TourEase.',
+      tags: ['info', 'conversation'],
+      lang: 'ar',
+    },
+    {
+      question: 'انت مين؟',
+      answer: 'أنا مساعد TourEase، موجود هنا لمساعدتك في أي سؤال أو استفسار.',
+      tags: ['info', 'identity'],
+      lang: 'ar',
+    },
+    {
+      question: 'ايه هو TourEase؟',
+      answer: 'TourEase منصة سفر تساعدك تستكشف الوجهات وتحجز الفنادق والباقات بسهولة.',
+      tags: ['info', 'tourEase'],
+      lang: 'ar',
+    },
+    {
+      question: 'عايز اخطط رحلة',
+      answer: 'تمام! قلّي وجهتك المفضلة وتواريخ السفر وأنا أبدأ أساعدك.',
+      tags: ['planning', 'help'],
+      lang: 'ar',
+    },
+    {
+      question: 'مش فاهم',
+      answer: 'ولا يهمك! ممكن توضح لي أكتر أو تعيد السؤال؟',
+      tags: ['help', 'clarification'],
+      lang: 'ar',
+    },
+    {
+      question: 'إشرح تاني',
+      answer: 'حاضر! قُلّي الجزء اللي محتاج تفهمه أكتر وأنا أشرحه لك.',
+      tags: ['help', 'clarification'],
       lang: 'ar',
     },
   ];

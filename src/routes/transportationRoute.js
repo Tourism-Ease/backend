@@ -26,22 +26,22 @@ import { protect, allowedTo } from '../services/authService.js';
 const router = express.Router();
 
 // ------------------------------
-// PUBLIC OR EMPLOYEE-AUTH ROUTES
+// PUBLIC  ROUTES
 // ------------------------------
 router.get('/', getTransportations);
 
 router.get('/:id', getTransportationValidator, getTransportationById);
 
-// router.use(protect);
+router.use(protect);
 
 // ------------------------------
 // ADMIN ROUTES
 // ------------------------------
-// router.use(allowedTo('admin'));
+router.use(allowedTo('admin'));
 
 router.post('/', createTransportationValidator, createTransportation);
 
-router.put('/:id', updateTransportationValidator, updateTransportationById);
+router.patch('/:id', updateTransportationValidator, updateTransportationById);
 
 router.delete('/:id', deleteTransportationValidator, deleteTransportationById, sendDeleteResponse);
 
