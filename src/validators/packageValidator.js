@@ -180,9 +180,9 @@ export const updatePackageValidator = [
   //   ))
   //   .withMessage('Each itinerary day must have valid day number, title, and description'),
 
-  body('imageCover').optional().notEmpty().withMessage('Cover image is required'),
+  // body('imageCover').optional().notEmpty().withMessage('Cover image is required'),
 
-  body('images').optional().isArray({ max: 10 }).withMessage('Images must be an array with max 10 items'),
+  // body('images').optional().isArray({ max: 5 }).withMessage('Images must be an array with max 5 items'),
 
   // body('packageTransportation')
   //   .optional()

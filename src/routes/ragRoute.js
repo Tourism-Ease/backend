@@ -5,7 +5,7 @@ import {
   getFaqById,
   updateFaqById,
   deleteFaqById,
-} from '../services/faqCrudService.js';
+} from '../services/faqService.js';
 import { chatHandler } from '../services/ragService.js';
 import { getAllMiddleware } from '../middlewares/getAllMiddleware.js';
 
