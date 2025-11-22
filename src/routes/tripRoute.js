@@ -28,8 +28,6 @@ router.get('/', getTrips);
 router.get('/:id', getTripValidator, getTripById);
 
 // CREATE trip
-// router.post('/', uploadTripImages, resizeTripImages, createTripValidator, createTrip);
-
 router.post('/', uploadTripImages, resizeTripImages, createTripValidator, createTrip);
 
 // UPDATE trip

@@ -1,4 +1,3 @@
-// services/faqCrudService.js
 import FAQModel from '../models/faqModel.js';
 import * as factory from './handlerFactory.js';
 
