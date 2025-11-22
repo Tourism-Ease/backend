@@ -1,4 +1,3 @@
-// src/routes/hotelRoute.js
 import express from 'express';
 import {
   createHotel,
@@ -10,11 +9,10 @@ import {
   resizeHotelImages,
   deleteHotelImages,
 } from '../services/hotelService.js';
-import { validateLocation } from '../middlewares/hotel/validateLocation.js';
-import { parseJsonFields } from '../middlewares/hotel/parseAddress.js';
-import { sendDeleteResponse } from '../middlewares/deleteResponse.js';
+
 import { sendUpdatedDocResponse } from '../middlewares/updateResponse.js';
-import { validateAddress } from '../middlewares/hotel/validateAddress.js';
+import { sendDeleteResponse } from '../middlewares/deleteResponse.js';
+
 import { createHotelValidator, updateHotelValidator } from '../validators/hotelValidator.js';
 
 const router = express.Router();
@@ -27,9 +25,6 @@ router.post(
   '/',
   uploadHotelImages,
   resizeHotelImages,
-  parseJsonFields,
-  validateLocation,
-  validateAddress,
   createHotelValidator,
   createHotel
 );
@@ -38,9 +33,6 @@ router.patch(
   '/:id',
   uploadHotelImages,
   resizeHotelImages,
-  parseJsonFields,
-  validateLocation,
-  validateAddress,
   updateHotelValidator,
   updateHotelById,
   deleteHotelImages,

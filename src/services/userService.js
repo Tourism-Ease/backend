@@ -224,12 +224,10 @@ export const reactivateUserAccount = asyncHandler(async (req, res, next) => {
     return next(new APIError(`Invalid email or password`, 401));
   }
 
-  // 3- Generate JWT token
-  const token = createToken(user._id);
-
-  // 4- Activate user account
+  // 3- Activate user account
   user.active = true;
   await user.save();
 
-  res.status(200).json({ data: user, token });
+  // 4- Generate JWT token
+  sendToken(user, 200, res);
 });

@@ -3,6 +3,7 @@ dotenv.config({ path: './config.env' });
 
 import app from './src/app.js';
 import dbConnection from './src/config/database.js';
+import { startCancelExpiredBookingsJob } from './src/jobs/cancelExpiredBookings.js';
 
 // ===============================
 //  ENVIRONMENT VARIABLES
@@ -19,6 +20,9 @@ dbConnection();
 // ===============================
 const server = app.listen(PORT, () => {
   console.log(`App running on port ${PORT}`);
+  // Cron jobs
+  startCancelExpiredBookingsJob();
+
 });
 
 // ===============================
