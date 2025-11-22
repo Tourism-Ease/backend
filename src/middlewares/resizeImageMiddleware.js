@@ -82,7 +82,7 @@ export const resizeMixOfImages = (folderName, entityName, singleImageField, mult
         const image = req.files[singleImageField][0];
         const filename = `${entityName}-${uuid()}-${Date.now()}-cover`;
 
-        const buffer = await processImage(image.buffer, 2000, 1333, 80);
+        const buffer = await processImage(image.buffer, 2000, 1333, 95);
         const result = await uploadToCloudinary(buffer, folderName, filename);
 
         req.body[singleImageField] = result.public_id;
@@ -95,7 +95,7 @@ export const resizeMixOfImages = (folderName, entityName, singleImageField, mult
         const results = await Promise.all(
           images.map(async (image, index) => {
             const filename = `${entityName}-${uuid()}-${Date.now()}-${index + 1}`;
-            const buffer = await processImage(image.buffer, 900, 900, 75);
+            const buffer = await processImage(image.buffer, 900, 900, 85);
             const uploadResult = await uploadToCloudinary(buffer, folderName, filename);
             return {
               image: uploadResult.public_id,
