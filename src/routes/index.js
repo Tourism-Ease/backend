@@ -17,7 +17,7 @@ const mountRoutes = (app) => {
   });
   app.get('/api/v1', (req, res) => {
     res.status(200).json({
-      message: 'Welcome to TourismEase API v1 🚀',
+      message: 'Welcome to Safarnyy API v1 🚀',
       status: 'success',
       routes: {
         auth: '/api/v1/auth',
@@ -35,7 +35,7 @@ const mountRoutes = (app) => {
   app.use('/api/v1/packages', packageRoute);
   app.use('/api/v1/trips', tripRoute);
   app.use('/api/v1/bookings', bookingRoute);
-  app.use('/api/v1/rag', ragRoute);
+  app.use('/api/v1/faq', ragRoute);
   app.use('/api/v1/dashboard', dashboardRoute);
 };
 

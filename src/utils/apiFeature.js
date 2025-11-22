@@ -133,6 +133,13 @@ class APIFeature {
             ],
           };
           break;
+        case 'Booking':
+          searchQuery = {
+            $or: [
+              { bookingNumber: { $regex: this.queryString.keyword, $options: 'i' } },
+            ],
+          };
+          break;
         default:
           searchQuery = {
             $or: [{ name: { $regex: this.queryString.keyword, $options: 'i' } }],
