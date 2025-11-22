@@ -104,6 +104,16 @@ class APIFeature {
             ],
           };
           break;
+        case 'Trip':
+          searchQuery = {
+            $or: [
+              { name: { $regex: this.queryString.keyword, $options: 'i' } },
+              { 'title': { $regex: this.queryString.keyword, $options: 'i' } },
+              { 'overview': { $regex: this.queryString.keyword, $options: 'i' } },
+              { propertyHighlights: { $regex: this.queryString.keyword, $options: 'i' } },
+            ],
+          };
+          break;
 
         case 'RoomType':
           searchQuery = {

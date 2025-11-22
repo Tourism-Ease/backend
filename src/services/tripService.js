@@ -22,12 +22,12 @@ export const createTrip = factory.createOne(TripModel);
 // @desc    Get all trips
 // @route   GET    /api/v1/trips
 // @access  Public
-export const getTrips = factory.getAll(TripModel);
+export const getTrips = factory.getAll(TripModel, [{ path: 'destination', select: 'name' }]);
 
 // @desc    Get a trip by ID
 // @route   GET    /api/v1/trips/:id
 // @access  Public
-export const getTripById = factory.getOneById(TripModel);
+export const getTripById = factory.getOneById(TripModel, [{ path: 'destination', select: 'name' }]);
 
 // @desc    Update a trip by ID
 // @route   PUT    /api/v1/trips/:id

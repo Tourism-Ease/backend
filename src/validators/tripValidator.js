@@ -15,7 +15,8 @@ export const createTripValidator = [
     .isLength({ min: 3, max: 100 }).withMessage('Trip title must be between 3 and 100 characters'),
 
   body('destination')
-    .notEmpty().withMessage('Destination ID is required').isMongoId()
+    .notEmpty().withMessage('Destination ID is required')
+    .isMongoId()
     .withMessage('Destination ID must be a valid MongoID'),
 
   // Egyptian price (required)
@@ -58,26 +59,6 @@ export const createTripValidator = [
     .optional()
     .isArray({ max: 10 }).withMessage('Maximum 10 items are allowed in whatToBring'),
 
-  body('departureDate')
-    .notEmpty()
-    .withMessage('Departure date is required')
-    .isISO8601()
-    .withMessage('Departure date must be a valid date')
-    .custom((value) => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // start of today
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1); // start of tomorrow
-
-      const depDate = new Date(value);
-      depDate.setHours(0, 0, 0, 0);
-
-      if (depDate < tomorrow) {
-        throw new Error('Departure date must be tomorrow or a future date');
-      }
-      return true;
-    }),
-
   // ImageCover must exist
   body('imageCover')
     .notEmpty().withMessage('Main cover image (imageCover) is required'),
@@ -99,8 +80,8 @@ export const updateTripValidator = [
     .isLength({ min: 3, max: 100 }).withMessage('Trip title must be between 3 and 100 characters'),
 
   body('destination')
-    .optional()
-    .custom(val => mongoose.Types.ObjectId.isValid(val))
+    .notEmpty().withMessage('Destination ID is required')
+    .isMongoId()
     .withMessage('Destination ID must be a valid MongoID'),
 
   body('egyptianPrice')

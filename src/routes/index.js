@@ -7,7 +7,7 @@ import tripRoute from './tripRoute.js';
 import packageRoute from './packageRoute.js';
 import destinationRoute from './destinationRoute.js';
 import bookingRoute from './bookingRoute.js';
-import faqRoute from './faq.route.js';
+import ragRoute from './ragRoute.js';
 
 
 // Mount Routes
@@ -26,15 +26,6 @@ const mountRoutes = (app) => {
   });
 
 
-  app.get('/api/v1/debug-env', (req, res) => {
-    res.json({
-      mongo: process.env.DB_URI ? "OK" : "MISSING",
-      nodeEnv: process.env.NODE_ENV,
-    });
-  });
-
-
-
   app.use('/api/v1/users', userRoute);
   app.use('/api/v1/auth', authRoute);
   app.use('/api/v1/hotels', hotelRoute);
@@ -44,7 +35,7 @@ const mountRoutes = (app) => {
   app.use('/api/v1/packages', packageRoute);
   app.use('/api/v1/trips', tripRoute);
   app.use('/api/v1/bookings', bookingRoute);
-  app.use('/api/v1/faq', faqRoute);
+  app.use('/api/v1/fag', ragRoute);
 };
 
 export default mountRoutes;

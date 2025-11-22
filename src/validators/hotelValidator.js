@@ -54,8 +54,8 @@ export const createHotelValidator = [
   ,
 
   body('images').optional().isArray({ max: 5 }).withMessage('Images must be an array of max 5 items'),
-    // .custom((arr) => arr.every(i => typeof i === 'string' && i.trim() !== ''))
-    // .withMessage('Each image must be a non-empty string'),
+  // .custom((arr) => arr.every(i => typeof i === 'string' && i.trim() !== ''))
+  // .withMessage('Each image must be a non-empty string'),
 
   body('rooms').optional().isArray()
     .custom((arr) => arr.every(i => mongoose.Types.ObjectId.isValid(i)))
@@ -92,8 +92,8 @@ export const updateHotelValidator = [
     }
     return true;
   }),
-  body('images').optional().isArray({ max: 5 })
-    .custom((arr) => arr.every(i => typeof i === 'string' && i.trim() !== '')),
+  body('images').optional().isArray({ max: 5 }).withMessage('Images must be an array of max 5 items'),
+  // .custom((arr) => arr.every(i => typeof i === 'string' && i.trim() !== '')),
   body('rooms').optional().isArray()
     .custom((arr) => arr.every(i => mongoose.Types.ObjectId.isValid(i)))
     .custom((arr) => new Set(arr.map(String)).size === arr.length),

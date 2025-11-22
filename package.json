@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start:dev": "nodemon server.js",
-    "start:prod": "SET NODE_ENV=production & node server.js"
+    "start:prod": "SET NODE_ENV=production & node server.js",
+    "seed:faqs": "node ./src/scripts/seedFaqs.js"
   },
   "keywords": [],
   "author": "",
