@@ -223,8 +223,8 @@ export const createBooking = asyncHandler(async (req, res, next) => {
         },
       ],
 
-      success_url: `${process.env.FRONTEND_URL}/payment/success`,
-      cancel_url: `${process.env.FRONTEND_URL}/pay`,
+      success_url: `${process.env.FRONTEND_URL}/bookings`,
+      cancel_url: `${process.env.FRONTEND_URL}/payment/fail`,
 
       customer_email: req.user.email,
       client_reference_id: itemId,
